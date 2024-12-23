@@ -1,5 +1,6 @@
 package co.sakurastudios.cooltp
 
+import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Location
 import org.bukkit.Particle
@@ -18,13 +19,29 @@ class PortalCommand : CommandExecutor {
             return false
 
         val startLocation = sender.location
-        val destinationLocation = sender.location.add(100.0, 0.0, 20.0)
+        var destinationLocation = sender.location.add(100.0, 0.0, 20.0)
 
         // Add the portal to the active list
         activePortals.add(Pair(startLocation, destinationLocation))
 
+
+
+        //Create Destination From Args
+        if (args.isNotEmpty()) {
+            val world = startLocation.world
+            val x = args[0].toDoubleOrNull() ?: 0.0
+            val y = args[1].toDoubleOrNull() ?: 0.0
+            val z = args[2].toDoubleOrNull() ?: 0.0
+
+            destinationLocation = Location(world, x, y, z)
+
+            Bukkit.getLogger().info("Destination Set To: ${destinationLocation.x} ${destinationLocation.y} ${destinationLocation.z}")
+        }
+
+
         // Spawn the portal
         spawnPortal(startLocation, destinationLocation)
+        Bukkit.getLogger().info("Destination Of Portal Is Been Set To: ${destinationLocation.x} ${destinationLocation.y} ${destinationLocation.z}")
 
         return true
     }
@@ -70,6 +87,7 @@ class PortalCommand : CommandExecutor {
                     portalLocation.world?.players?.forEach { player ->
                         if (player.location.distance(portalLocation) <= 1.5) { // If the player is within 1.5 blocks of the portal
                             Camera.MoveCameraTask(player, destinationLocation).runTaskTimer(CoolAnimatedTeleport.instance, 0, 1) // Teleport the player
+                            Bukkit.getLogger().info("Player Teleported To: ${destinationLocation.x} ${destinationLocation.y} ${destinationLocation.z}")
                             player.sendMessage("You have been teleported!")
                         }
                     }

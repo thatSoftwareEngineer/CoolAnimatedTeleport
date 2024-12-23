@@ -28,7 +28,7 @@ object Camera {
         private val location: Location
     ) : BukkitRunnable() {
         private val destination = location
-        private val highPoint = 250.0
+        private val highPoint = 175.0
         private val duration = 80
         private val epsilon = 0.5
         private var progress = 0.0
@@ -39,7 +39,6 @@ object Camera {
             try {
                 val (curX, curY, curZ, _, _) = player.location
                 val (destX, destY, destZ, _, _) = destination
-                Bukkit.getLogger().info("Camera movement stage $stage for player ${player.name}")
 
                 when (stage) {
                     0 -> updateCamera(deltaY = highPoint - curY, deltaPitch = 90F) // Pitch down to face the floor
