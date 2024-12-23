@@ -18,26 +18,23 @@ class PortalCommand : CommandExecutor {
         if (sender !is Player)
             return false
 
-        val startLocation = sender.location
-        var destinationLocation = sender.location.add(100.0, 0.0, 20.0)
+        val startLocation = sender.location.clone() // Clone to prevent unintended modifications
+        var destinationLocation = sender.location.add(100.0, 0.0, 20.0).clone()
 
-        // Add the portal to the active list
-        activePortals.add(Pair(startLocation, destinationLocation))
-
-
-
-        //Create Destination From Args
-        if (args.isNotEmpty()) {
+        // Create Destination From Args
+        if (args.size >= 3) {
             val world = startLocation.world
             val x = args[0].toDoubleOrNull() ?: 0.0
             val y = args[1].toDoubleOrNull() ?: 0.0
             val z = args[2].toDoubleOrNull() ?: 0.0
 
-            destinationLocation = Location(world, x, y, z)
+            destinationLocation = Location(world, x, y, z).clone()
 
             Bukkit.getLogger().info("Destination Set To: ${destinationLocation.x} ${destinationLocation.y} ${destinationLocation.z}")
         }
 
+        // Add the portal to the active list
+        activePortals.add(Pair(startLocation, destinationLocation))
 
         // Spawn the portal
         spawnPortal(startLocation, destinationLocation)
@@ -46,30 +43,32 @@ class PortalCommand : CommandExecutor {
         return true
     }
 
-    fun spawnPortal(location: Location, destination: Location) {
+    private fun spawnPortal(location: Location, destination: Location) {
         // Continuously spawn particles around the portal
         object : BukkitRunnable() {
             var angle = 0.0 // To track the angle for the spiral
 
             override fun run() {
-                for (portal in activePortals) {
-                    val portalLocation = portal.first
-                    for (height in 0..20 step 1) {
-                        val y = height / 10.0
-                        val x = Math.cos(angle + y) * 0.5
-                        val z = Math.sin(angle + y) * 0.5
-                        val particleLoc = portalLocation.clone().add(x, y, z)
+                synchronized(activePortals) {
+                    for (portal in activePortals) {
+                        val portalLocation = portal.first
+                        for (height in 0..20 step 1) {
+                            val y = height / 10.0
+                            val x = Math.cos(angle + y) * 0.5
+                            val z = Math.sin(angle + y) * 0.5
+                            val particleLoc = portalLocation.clone().add(x, y, z)
 
-                        // Calculate RGB color based on the angle
-                        val red = Math.abs(Math.sin(angle)).toFloat()
-                        val green = Math.abs(Math.sin(angle + 2)).toFloat()
-                        val blue = Math.abs(Math.sin(angle + 4)).toFloat()
+                            // Calculate RGB color based on the angle
+                            val red = Math.abs(Math.sin(angle)).toFloat()
+                            val green = Math.abs(Math.sin(angle + 2)).toFloat()
+                            val blue = Math.abs(Math.sin(angle + 4)).toFloat()
 
-                        // Create the particle dust options
-                        val dustOptions = Particle.DustOptions(Color.fromRGB((red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt()), 1f)
+                            // Create the particle dust options
+                            val dustOptions = Particle.DustOptions(Color.fromRGB((red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt()), 1f)
 
-                        // Spawn the particle
-                        portalLocation.world?.spawnParticle(Particle.DUST, particleLoc, 1, dustOptions)
+                            // Spawn the particle
+                            portalLocation.world?.spawnParticle(Particle.DUST, particleLoc, 1, dustOptions)
+                        }
                     }
                 }
 
@@ -80,15 +79,17 @@ class PortalCommand : CommandExecutor {
         // Continuously check for players entering any portal
         object : BukkitRunnable() {
             override fun run() {
-                for (portal in activePortals) {
-                    val portalLocation = portal.first
-                    val destinationLocation = portal.second
+                synchronized(activePortals) {
+                    for (portal in activePortals) {
+                        val portalLocation = portal.first
+                        val destinationLocation = portal.second
 
-                    portalLocation.world?.players?.forEach { player ->
-                        if (player.location.distance(portalLocation) <= 1.5) { // If the player is within 1.5 blocks of the portal
-                            Camera.MoveCameraTask(player, destinationLocation).runTaskTimer(CoolAnimatedTeleport.instance, 0, 1) // Teleport the player
-                            Bukkit.getLogger().info("Player Teleported To: ${destinationLocation.x} ${destinationLocation.y} ${destinationLocation.z}")
-                            player.sendMessage("You have been teleported!")
+                        portalLocation.world?.players?.forEach { player ->
+                            if (player.location.distance(portalLocation) <= 1.5) { // If the player is within 1.5 blocks of the portal
+                                player.teleport(destinationLocation.clone()) // Clone to ensure safety
+                                Bukkit.getLogger().info("Player Teleported To: ${destinationLocation.x} ${destinationLocation.y} ${destinationLocation.z}")
+                                player.sendMessage("You have been teleported!")
+                            }
                         }
                     }
                 }
