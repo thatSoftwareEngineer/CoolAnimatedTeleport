@@ -1,0 +1,7 @@
+name: CoolAnimatedTeleport
+version: '1'
+main: co.sakurastudios.cooltp.CoolAnimatedTeleport
+api-version: '1.21'
+commands:
+  spawnportal:
+    description: funtimes
